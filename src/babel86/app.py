@@ -106,9 +106,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--display", choices=sorted(theme.DISPLAYS), default="vfd", help="display colour theme"
     )
-    parser.add_argument(
-        "--power-on", action="store_true", help="start with the power on, for screenshots (dev)"
-    )
+    parser.add_argument("--power-off", action="store_true", help="start with the power off (dev)")
     parser.add_argument(
         "--units", type=int, choices=range(1, 5), default=4, help="language units to show (dev)"
     )
@@ -126,7 +124,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     root = tk.Tk()
     rack = state.mock_rack(args.units)
     rack.display = args.display
-    rack.power = args.power_on
+    rack.power = not args.power_off
     app = build(root, rack)
     if args.dialog:
         mode, _, index = args.dialog.partition(":")

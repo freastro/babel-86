@@ -63,7 +63,7 @@ _Avoid_: Output text
 ### Controls and state
 
 **Power**:
-The master switch that starts or stops capture and opens or closes every Provider session. It is always off at launch.
+The master switch that starts or stops capture and opens or closes every Provider session. `docs/design.md` wants it off at launch; the app overrides that and starts it on.
 _Avoid_: On/off, start
 
 **Mute Input**:

@@ -36,7 +36,6 @@ def app(tk_root):
     from babel86.app import build
 
     rack = state.mock_rack(3)
-    rack.power = True
     built = build(tk_root, rack, scale=1.0)
     tk_root.update()
     yield built
@@ -81,22 +80,22 @@ def test_power_button_toggles_state(app):
     assert app.rack.power
 
 
-def test_app_launches_with_the_power_off(tk_root):
+def test_app_launches_with_the_power_on(tk_root):
     from babel86.app import build
 
     built = build(tk_root, scale=1.0)
     try:
-        assert not built.rack.power
+        assert built.rack.power
     finally:
         for child in tk_root.winfo_children():
             child.destroy()
 
 
-def test_power_off_is_the_default_of_the_dev_flags():
+def test_power_on_is_the_default_of_the_dev_flags():
     from babel86.app import parse_args
 
-    assert not parse_args([]).power_on
-    assert parse_args(["--power-on"]).power_on
+    assert not parse_args([]).power_off
+    assert parse_args(["--power-off"]).power_off
 
 
 def test_mute_buttons_latch_independently(app):

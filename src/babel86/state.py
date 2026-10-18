@@ -2,7 +2,8 @@
 
 Pure data and rules, with no Tk, so it can be tested without a display. The defaults
 match the canvas in `docs/design.html`: VFD display, four language units. Power starts
-off, as `docs/design.md` requires, so nothing runs until the operator presses it.
+on, which overrides `docs/design.md` (it asked for off) because the front panel has no audio
+yet and an unlit rack looked broken.
 """
 
 from __future__ import annotations
@@ -77,7 +78,7 @@ class InputUnit:
 
 @dataclass
 class RackState:
-    power: bool = False
+    power: bool = True
     display: str = "vfd"
     source: InputUnit = field(default_factory=InputUnit)
     units: list[LanguageUnit] = field(default_factory=list)

@@ -1,15 +1,9 @@
 from babel86 import state
 
 
-def _powered(units=4):
-    rack = state.mock_rack(units)
-    rack.power = True
-    return rack
-
-
 def test_mock_rack_matches_the_canvas_defaults():
     rack = state.mock_rack()
-    assert not rack.power  # power always starts off at launch
+    assert rack.power  # overrides design.md: power starts on at launch
     assert rack.display == "vfd"
     assert rack.source.gain_db == 4.0
     assert [(u.code, u.model, u.colour, u.status) for u in rack.units] == [
@@ -30,7 +24,7 @@ def test_mock_rack_can_show_fewer_units():
 
 
 def test_power_off_idles_every_unit_except_errors():
-    rack = _powered()
+    rack = state.mock_rack()
     es, fr, de, _pt = rack.units
     assert state.unit_status(rack, es) == "xlate"
     rack.power = False
@@ -40,7 +34,7 @@ def test_power_off_idles_every_unit_except_errors():
 
 
 def test_power_off_empties_meters_and_text():
-    rack = _powered()
+    rack = state.mock_rack()
     rack.power = False
     assert state.input_meter_db(rack) is None
     assert all(state.unit_meter_db(rack, u) is None for u in rack.units)
@@ -49,7 +43,7 @@ def test_power_off_empties_meters_and_text():
 
 
 def test_mute_input_empties_the_input_meter_and_changes_the_readout():
-    rack = _powered()
+    rack = state.mock_rack()
     assert state.input_meter_db(rack) == -11.0
     assert state.source_state_word(rack) == "LIVE"
     rack.source.muted = True
@@ -61,7 +55,7 @@ def test_mute_input_empties_the_input_meter_and_changes_the_readout():
 
 
 def test_mute_empties_only_that_units_meter_and_keeps_its_text():
-    rack = _powered()
+    rack = state.mock_rack()
     es, _fr, _de, pt = rack.units
     es.muted = True
     assert state.unit_meter_db(rack, es) is None
@@ -70,14 +64,14 @@ def test_mute_empties_only_that_units_meter_and_keeps_its_text():
 
 
 def test_idle_and_error_units_have_empty_meters():
-    rack = _powered()
+    rack = state.mock_rack()
     _es, fr, de, _pt = rack.units
     assert state.unit_meter_db(rack, fr) is None
     assert state.unit_meter_db(rack, de) is None
 
 
 def test_unit_lines():
-    rack = _powered()
+    rack = state.mock_rack()
     es, fr, de, _pt = rack.units
     assert state.unit_line(rack, es) == "▸ " + state.LANGUAGES["ES"][1]
     assert state.unit_line(rack, fr) == state.IDLE_LINE

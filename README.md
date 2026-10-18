@@ -46,8 +46,8 @@ babel86            # or: python -m babel86
 
 What you can do in this milestone:
 
-- The rack starts with the power off, as the design requires. Click the power
-  key to light the displays.
+- The rack starts with the power on, overriding `docs/design.md`. Click the power
+  key to darken the displays.
 - Click the power key, **MUTE INPUT** or a language's **MUTE** to latch them.
 - Turn a knob by dragging it up or down, scrolling over it, or clicking it and
   using the arrow keys (1 dB steps, **Shift** for 0.1 dB). Double-click resets
@@ -56,7 +56,7 @@ What you can do in this milestone:
   dialog; the rack dims behind it. **Esc** or **Cancel** closes it and returns
   to the rack. The input unit's SETUP does nothing yet.
 
-Dev flags: `--display vfd|led|lcd`, `--units 1-4`, `--power-on`, and
+Dev flags: `--display vfd|led|lcd`, `--units 1-4`, `--power-off`, and
 `--dialog add` or `--dialog edit:2` to open the dialog at launch (handy for
 screenshots).
 
