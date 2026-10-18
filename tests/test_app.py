@@ -35,7 +35,9 @@ def tk_root():
 def app(tk_root):
     from babel86.app import build
 
-    built = build(tk_root, state.mock_rack(3), scale=1.0)
+    rack = state.mock_rack(3)
+    rack.power = True
+    built = build(tk_root, rack, scale=1.0)
     tk_root.update()
     yield built
     for child in tk_root.winfo_children():
@@ -77,6 +79,24 @@ def test_power_button_toggles_state(app):
     assert not app.rack.power
     _click(app, _hit(app, "power"))
     assert app.rack.power
+
+
+def test_app_launches_with_the_power_off(tk_root):
+    from babel86.app import build
+
+    built = build(tk_root, scale=1.0)
+    try:
+        assert not built.rack.power
+    finally:
+        for child in tk_root.winfo_children():
+            child.destroy()
+
+
+def test_power_off_is_the_default_of_the_dev_flags():
+    from babel86.app import parse_args
+
+    assert not parse_args([]).power_on
+    assert parse_args(["--power-on"]).power_on
 
 
 def test_mute_buttons_latch_independently(app):
@@ -133,19 +153,44 @@ def test_pointer_follows_the_knob_value(app):
 
 def test_setup_buttons_open_the_dialog_and_escape_closes_it(app):
     _click(app, _hit(app, "setup", 1))
-    assert app.dialog is not None and app.dialog.winfo_exists()
-    assert app.dialog.draft.mode == "edit"
-    assert app.dialog.draft.code == "FR"
-    app.dialog.focus_force()
+    dialog = app.dialog
+    assert dialog is not None and dialog.winfo_exists()
+    assert dialog.draft.mode == "edit"
+    assert dialog.draft.code == "FR"
+    dialog.focus_force()
     app.root.update()
-    app.dialog.event_generate("<Escape>")
+    dialog.event_generate("<Escape>")
     app.root.update()
-    assert not app.dialog.winfo_exists()
+    assert not dialog.winfo_exists()
+    assert app.dialog is None
 
     _click(app, _hit(app, "add"))
     assert app.dialog.draft.mode == "add"
+    dialog = app.dialog
+    dialog.close()
+    assert not dialog.winfo_exists()
+    assert app.dialog is None
+
+
+def test_dialog_dims_the_rack_and_returns_focus_to_it(app):
+    cv = app.canvas
+    items_before = len(cv.find_all())
+    _click(app, _hit(app, "setup", 0))
+    app.root.update()
+    assert len(cv.find_all()) == items_before + 1  # the scrim sits on top of the rack
+    assert cv.type(cv.find_all()[-1]) == "image"
+
     app.dialog.close()
-    assert not app.dialog.winfo_exists()
+    app.root.update()
+    assert len(cv.find_all()) == items_before
+    assert app.root.focus_lastfor() is cv
+
+
+def test_scrim_has_the_requested_size(tk_root):
+    from babel86.assets import scrim
+
+    image = scrim(tk_root, 40, 30, 0.5)
+    assert (image.width(), image.height()) == (40, 30)
 
 
 def test_input_setup_is_inert_until_its_dialog_is_designed(app):

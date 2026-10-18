@@ -5,11 +5,16 @@ All sizes are in logical pixels (the design's CSS pixels); the renderer multipli
 them by the UI scale. Values come from `docs/design.md` and `docs/design.html`.
 """
 
+from __future__ import annotations
+
+from dataclasses import dataclass
+
 # -- Brand and channel colours ---------------------------------------------------------
 BLUE = "#2f5c9e"
 IVORY = "#f4efe2"
 GOLD = "#e2b23e"
 INK = "#141210"
+BLACK = "#000000"
 
 PASTELS = {
     "coral": "#e8806a",
@@ -36,6 +41,12 @@ EDGE_BLANK = ("#2c2c2e", "#050505", "#0c0c0d")
 
 SLOT = "#050505"  # blank-panel vent slots
 DASH = "#6a6a6e"
+SCREW_SLOT_INPUT = "#5d584e"
+SCREW_SLOT_OUTPUT = "#2a2926"
+KNOB_POINTER = "#f7f3ea"
+KNOB_POINTER_EDGE = "#2a2926"  # the pointer's 1 px shadow, as a flat colour
+METER_BG_INPUT = "#0a0a0a"
+METER_BG_OUTPUT = "#070707"
 
 # -- Text colours --------------------------------------------------------------------------
 INK_INPUT = "#2b2720"
@@ -81,7 +92,31 @@ BUTTON_DARK_FACE = "#0f0f10"
 BUTTON_DARK_BORDER = "#3a3a3d"
 POWER_FACE = "#1d1b18"
 POWER_BORDER = "#0e0d0b"
+POWER_HIGHLIGHT = "#3a3835"
 POWER_OFF_ICON = "#8b8579"
+BUTTON_MUTE_HIGHLIGHT = "#d9d3c4"
+BUTTON_CREAM_FACE = FACE_INPUT[0]
+BUTTON_CREAM_HIGHLIGHT = "#e4ded0"
+REMOVE_BORDER = "#6a2a24"
+REMOVE_TEXT = "#ff8a7a"
+
+
+@dataclass(frozen=True)
+class ButtonStyle:
+    """The colours of one kind of key, so they travel together."""
+
+    face: str
+    fg: str
+    shadow: str
+    border: str | None = None
+    highlight: str | None = None
+
+
+KEY_INPUT = ButtonStyle(BUTTON_INPUT_FACE, TEXT_BUTTON, BUTTON_INPUT_SHADOW)
+KEY_MUTE = ButtonStyle(BUTTON_MUTE_FACE, INK, BLACK, BLACK, BUTTON_MUTE_HIGHLIGHT)
+KEY_DARK = ButtonStyle(BUTTON_DARK_FACE, TEXT_BUTTON_DARK, BLACK, BUTTON_DARK_BORDER)
+KEY_CONFIRM = ButtonStyle(BUTTON_CREAM_FACE, INK, BLACK, BLACK, BUTTON_CREAM_HIGHLIGHT)
+KEY_ADD = ButtonStyle(FACE_BLANK, TEXT_OUTPUT, FACE_BLANK)
 
 # -- Type -----------------------------------------------------------------------------------
 # Logical families. `fonts.py` swaps these for fallbacks if registration fails.
@@ -120,3 +155,21 @@ BUTTON_WIDTH = 128
 BUTTON_HEIGHT = 44
 KNOB_DIAMETER = 46
 KNOB_BLOCK = (84, 72)
+
+# -- Language setup dialog ---------------------------------------------------------------
+DIALOG_WIDTH = 560
+DIALOG_PAD = 24
+DIALOG_FIELD_GAP = 22
+DIALOG_CONTROL_HEIGHT = 48
+DIALOG_LABEL_HEIGHT = 12
+DIALOG_LABEL_GAP = 8  # between a field's label and its well
+DIALOG_NOTE_HEIGHT = 21  # the Pass-thru explanation under the model selector
+DIALOG_CODE_TOP, DIALOG_CODE_BOTTOM = 20, 74  # the language code box in the header
+DIALOG_STRIP_TOP, DIALOG_STRIP_HEIGHT = 94, 4  # the six-colour strip under the header
+DIALOG_HEADER_HEIGHT = DIALOG_STRIP_TOP + DIALOG_STRIP_HEIGHT
+DIALOG_FOOTER_HEIGHT = 77
+DIALOG_SWATCH = 44
+DIALOG_SWATCH_PITCH = 54
+DIALOG_COLUMN_GAP = 12
+DIALOG_KEY_GAP = 10  # between the Cancel and confirm keys
+DIALOG_SCRIM_OPACITY = 0.6  # how far the rack behind the dialog is darkened

@@ -12,7 +12,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from babel86 import layout, meters, state, theme
-from babel86.assets import Sprites
+from babel86.assets import Sprites, scrim
 from babel86.fonts import FontBook
 from babel86.state import LanguageUnit, RackState
 from babel86.textfit import ellipsize
@@ -68,6 +68,8 @@ class RackCanvas(tk.Canvas):
         self._drag: tuple[KnobKey, int, float] | None = None
         self._pressed: Hit | None = None
         self._render_scheduled = False
+        self._dimmed = False
+        self._scrim: tuple[int, int, tk.PhotoImage] | None = None
 
         self.bind("<Configure>", lambda _e: self.invalidate())
         self.bind("<ButtonPress-1>", self._on_press)
@@ -94,6 +96,19 @@ class RackCanvas(tk.Canvas):
             self._render_scheduled = True
             self.after_idle(self.render)
 
+    def set_dimmed(self, dimmed: bool) -> None:
+        """Darken the whole rack, as a modal dialog does, or restore it."""
+        if dimmed != self._dimmed:
+            self._dimmed = dimmed
+            self.invalidate()
+
+    def _draw_scrim(self) -> None:
+        width, height = self.winfo_width(), self.winfo_height()
+        if self._scrim is None or self._scrim[:2] != (width, height):
+            image = scrim(self, width, height, theme.DIALOG_SCRIM_OPACITY)
+            self._scrim = (width, height, image)
+        self.create_image(0, 0, image=self._scrim[2], anchor="nw")
+
     def render(self) -> None:
         self._render_scheduled = False
         self.delete("all")
@@ -109,6 +124,10 @@ class RackCanvas(tk.Canvas):
         for i, unit in enumerate(self.state.units):
             self._draw_language(box.x, tops[1 + i], cols, i, unit)
         self._draw_blank(box.x, tops[-1], cols)
+        if self._dimmed:
+            self._draw_scrim()
+        else:
+            self._scrim = None
 
     # -- display colours -----------------------------------------------------------------
 
@@ -141,7 +160,7 @@ class RackCanvas(tk.Canvas):
         mid = y + h / 2
         p.box(cx0, mid - 24 + 2, cx0 + 48, mid + 24 + 2, theme.BUTTON_INPUT_SHADOW, 6)
         p.box(cx0, mid - 24, cx0 + 48, mid + 24, theme.POWER_FACE, 6, theme.POWER_BORDER, 2)
-        p.rect(cx0 + 3, mid - 22, cx0 + 45, mid - 21, "#3a3835")
+        p.rect(cx0 + 3, mid - 22, cx0 + 45, mid - 21, theme.POWER_HIGHLIGHT)
         draw_power_icon(p, cx0 + 24, mid, theme.GOLD if rack.power else theme.POWER_OFF_ICON)
         self.hits.append(Hit(cx0, mid - 24, cx0 + 48, mid + 24, "power"))
 
@@ -203,9 +222,7 @@ class RackCanvas(tk.Canvas):
             bx,
             row,
             "MUTE INPUT",
-            face=theme.BUTTON_INPUT_FACE,
-            fg=theme.TEXT_BUTTON,
-            shadow=theme.BUTTON_INPUT_SHADOW,
+            theme.KEY_INPUT,
             led="led_red" if lit else "led_off",
         )
         self.hits.append(
@@ -217,9 +234,7 @@ class RackCanvas(tk.Canvas):
             bx,
             by,
             "SETUP",
-            face=theme.BUTTON_INPUT_FACE,
-            fg=theme.TEXT_BUTTON,
-            shadow=theme.BUTTON_INPUT_SHADOW,
+            theme.KEY_INPUT,
             icon="sliders",
         )
         self.hits.append(Hit(bx, by, bx + theme.BUTTON_WIDTH, by + theme.BUTTON_HEIGHT, "setup_in"))
@@ -352,11 +367,7 @@ class RackCanvas(tk.Canvas):
             bx,
             row,
             "MUTE",
-            face=theme.BUTTON_MUTE_FACE,
-            fg=theme.INK,
-            shadow="#000000",
-            border="#000000",
-            highlight="#d9d3c4",
+            theme.KEY_MUTE,
             led="led_red" if rack.power and unit.muted else "led_off",
         )
         self.hits.append(
@@ -368,10 +379,7 @@ class RackCanvas(tk.Canvas):
             bx,
             by,
             "SETUP",
-            face=theme.BUTTON_DARK_FACE,
-            fg=theme.TEXT_BUTTON_DARK,
-            shadow="#000000",
-            border=theme.BUTTON_DARK_BORDER,
+            theme.KEY_DARK,
             icon="sliders",
         )
         self.hits.append(
@@ -450,9 +458,7 @@ class RackCanvas(tk.Canvas):
                 bx,
                 mid - 22,
                 label,
-                face=theme.FACE_BLANK,
-                fg=theme.TEXT_OUTPUT,
-                shadow=theme.FACE_BLANK,
+                theme.KEY_ADD,
                 width=bw,
                 height=44,
                 spacing=0.2,

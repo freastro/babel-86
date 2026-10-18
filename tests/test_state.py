@@ -1,9 +1,15 @@
 from babel86 import state
 
 
+def _powered(units=4):
+    rack = state.mock_rack(units)
+    rack.power = True
+    return rack
+
+
 def test_mock_rack_matches_the_canvas_defaults():
     rack = state.mock_rack()
-    assert rack.power
+    assert not rack.power  # power always starts off at launch
     assert rack.display == "vfd"
     assert rack.source.gain_db == 4.0
     assert [(u.code, u.model, u.colour, u.status) for u in rack.units] == [
@@ -24,7 +30,7 @@ def test_mock_rack_can_show_fewer_units():
 
 
 def test_power_off_idles_every_unit_except_errors():
-    rack = state.mock_rack()
+    rack = _powered()
     es, fr, de, _pt = rack.units
     assert state.unit_status(rack, es) == "xlate"
     rack.power = False
@@ -34,7 +40,7 @@ def test_power_off_idles_every_unit_except_errors():
 
 
 def test_power_off_empties_meters_and_text():
-    rack = state.mock_rack()
+    rack = _powered()
     rack.power = False
     assert state.input_meter_db(rack) is None
     assert all(state.unit_meter_db(rack, u) is None for u in rack.units)
@@ -43,7 +49,7 @@ def test_power_off_empties_meters_and_text():
 
 
 def test_mute_input_empties_the_input_meter_and_changes_the_readout():
-    rack = state.mock_rack()
+    rack = _powered()
     assert state.input_meter_db(rack) == -11.0
     assert state.source_state_word(rack) == "LIVE"
     rack.source.muted = True
@@ -55,7 +61,7 @@ def test_mute_input_empties_the_input_meter_and_changes_the_readout():
 
 
 def test_mute_empties_only_that_units_meter_and_keeps_its_text():
-    rack = state.mock_rack()
+    rack = _powered()
     es, _fr, _de, pt = rack.units
     es.muted = True
     assert state.unit_meter_db(rack, es) is None
@@ -64,14 +70,14 @@ def test_mute_empties_only_that_units_meter_and_keeps_its_text():
 
 
 def test_idle_and_error_units_have_empty_meters():
-    rack = state.mock_rack()
+    rack = _powered()
     _es, fr, de, _pt = rack.units
     assert state.unit_meter_db(rack, fr) is None
     assert state.unit_meter_db(rack, de) is None
 
 
 def test_unit_lines():
-    rack = state.mock_rack()
+    rack = _powered()
     es, fr, de, _pt = rack.units
     assert state.unit_line(rack, es) == "▸ " + state.LANGUAGES["ES"][1]
     assert state.unit_line(rack, fr) == state.IDLE_LINE
@@ -97,6 +103,24 @@ def test_add_draft_picks_the_first_free_language_colour_and_slot():
     assert draft.title == "ADD LANGUAGE"
     assert draft.confirm_label == "ADD TO RACK"
     assert draft.kicker == "OUTPUT 04 · SETUP"
+
+
+def test_add_draft_uses_the_next_unused_channel_and_the_last_devices():
+    rack = state.mock_rack(3)
+    rack.units[0].channel = 5
+    rack.units[2].channel = 2
+    rack.units[2].device = "Speakers"
+    draft = state.language_draft(rack, "add")
+    assert draft.channel == 1  # 5, 2 and 3 are taken, so the lowest free one is 1
+    assert draft.device == "Speakers"  # the last language's device
+    assert draft.slot == 4
+
+
+def test_add_draft_without_languages_falls_back_to_the_placeholder_device():
+    rack = state.mock_rack()
+    rack.units.clear()
+    draft = state.language_draft(rack, "add")
+    assert (draft.device, draft.channel, draft.slot) == (state.DEFAULT_DEVICE, 1, 1)
 
 
 def test_edit_draft_mirrors_the_unit():

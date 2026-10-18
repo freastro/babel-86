@@ -30,12 +30,8 @@ def draw_button(
     x: float,
     y: float,
     label: str,
+    style: theme.ButtonStyle,
     *,
-    face: str,
-    fg: str,
-    shadow: str,
-    border: str | None = None,
-    highlight: str | None = None,
     led: str | None = None,
     icon: str | None = None,
     width: float = theme.BUTTON_WIDTH,
@@ -47,10 +43,10 @@ def draw_button(
     if dashed:
         p.dashed_box(x, y, x + width, y + height, dashed)
     else:
-        p.box(x, y + 2, x + width, y + height + 2, shadow, 4)
-        p.box(x, y, x + width, y + height, face, 4, border, 1 if border else 0)
-        if highlight:
-            p.rect(x + 2, y + 1, x + width - 2, y + 2, highlight)
+        p.box(x, y + 2, x + width, y + height + 2, style.shadow, 4)
+        p.box(x, y, x + width, y + height, style.face, 4, style.border, 1 if style.border else 0)
+        if style.highlight:
+            p.rect(x + 2, y + 1, x + width - 2, y + 2, style.highlight)
 
     mark = 8 if led else 14 if icon else 0
     gap = 8 if mark else 0
@@ -60,8 +56,8 @@ def draw_button(
     if led:
         p.image(led, left + 4, cy)
     elif icon:
-        draw_icon(p, icon, left + 7, cy, 14, fg)
-    p.text(left + mark + gap, cy, label, "caption", 11, fg, bold=True, spacing=spacing)
+        draw_icon(p, icon, left + 7, cy, 14, style.fg)
+    p.text(left + mark + gap, cy, label, "caption", 11, style.fg, bold=True, spacing=spacing)
 
 
 def draw_icon(p: Painter, name: str, cx: float, cy: float, size: float, colour: str) -> None:

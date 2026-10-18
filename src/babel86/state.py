@@ -1,11 +1,13 @@
 """Rack state and the mock data that drives Milestone 1.
 
 Pure data and rules, with no Tk, so it can be tested without a display. The defaults
-match the canvas in `docs/design.html`: power on, VFD display, four language units.
+match the canvas in `docs/design.html`: VFD display, four language units. Power starts
+off, as `docs/design.md` requires, so nothing runs until the operator presses it.
 """
 
 from __future__ import annotations
 
+import itertools
 from dataclasses import dataclass, field
 
 from babel86 import theme
@@ -26,6 +28,7 @@ LANGUAGES: dict[str, tuple[str, str]] = {
 }
 
 MAX_LANGUAGE_UNITS = 4
+DEFAULT_DEVICE = "[DEVICE]"
 HEAR_LINE = "▸ Good evening, and welcome to tonight's session."
 PASS_THRU_LINE = "[ORIGINAL AUDIO PASSED THROUGH — NOT TRANSLATED]"
 ERROR_LINE = "ERR · Translation engine not responding. Retrying…"
@@ -64,7 +67,7 @@ class InputUnit:
 
     code: str = "EN"
     language: str = "ENGLISH"
-    device: str = "[DEVICE]"
+    device: str = DEFAULT_DEVICE
     channel: int = 1
     format: str = "MONO · 48kHz"
     gain_db: float = 4.0
@@ -74,7 +77,7 @@ class InputUnit:
 
 @dataclass
 class RackState:
-    power: bool = True
+    power: bool = False
     display: str = "vfd"
     source: InputUnit = field(default_factory=InputUnit)
     units: list[LanguageUnit] = field(default_factory=list)
@@ -86,6 +89,15 @@ class RackState:
     def next_free_code(self) -> str:
         used = {u.code for u in self.units}
         return next((c for c in LANGUAGES if c not in used), "IT")
+
+    def next_free_channel(self) -> int:
+        """The lowest output channel no language unit uses yet."""
+        used = {u.channel for u in self.units}
+        return next(c for c in itertools.count(1) if c not in used)
+
+    def last_device(self) -> str:
+        """The output device of the last language unit, or the placeholder when there is none."""
+        return self.units[-1].device if self.units else DEFAULT_DEVICE
 
     def next_free_colour(self) -> str:
         used = {u.colour for u in self.units}
@@ -146,7 +158,14 @@ def language_draft(rack: RackState, mode: str, index: int | None = None) -> Lang
     code = rack.next_free_code()
     slot = len(rack.units) + 1
     return LanguageDraft(
-        "add", code, LANGUAGES[code][0], "gemini", "[DEVICE]", slot, rack.next_free_colour(), slot
+        "add",
+        code,
+        LANGUAGES[code][0],
+        "gemini",
+        rack.last_device(),
+        rack.next_free_channel(),
+        rack.next_free_colour(),
+        slot,
     )
 
 

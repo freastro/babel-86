@@ -14,7 +14,6 @@ CAPTION_H = 12
 BLOCK_TOTAL_H = BLOCK_H + CAPTION_GAP + CAPTION_H  # scale labels and knob, then the caption
 KNOB_LEFT, KNOB_TOP = 19, 13
 POINTER_INNER, POINTER_OUTER = 6.0, 18.0
-POINTER_EDGE = "#2a2926"  # the pointer's 1 px shadow, as a flat colour
 
 
 def knob_rect(x: float, y: float) -> tuple[float, float, float, float]:
@@ -37,7 +36,7 @@ def draw_knob(
 ) -> None:
     """Draw a knob block with its top-left at logical (x, y)."""
     p.text(x + BLOCK_W / 2, y + 6, "0", "mono", 10, scale_colour, anchor="center")
-    p.text(x, y + BLOCK_H - 6, "-24", "mono", 10, scale_colour)
+    p.text(x, y + BLOCK_H - 6, "\N{MINUS SIGN}24", "mono", 10, scale_colour)
     p.text(x + BLOCK_W, y + BLOCK_H - 6, "+24", "mono", 10, scale_colour, anchor="e")
 
     kx, ky = x + KNOB_LEFT, y + KNOB_TOP
@@ -50,8 +49,8 @@ def draw_knob(
     theta = math.radians(knob_angle(db))
     ux, uy = math.sin(theta), -math.cos(theta)
     r0, r1 = POINTER_INNER + 1.5, POINTER_OUTER - 1.5  # round caps add 1.5 px each end
-    p.line(cx + ux * r0, cy + uy * r0, cx + ux * r1, cy + uy * r1, POINTER_EDGE, 5)
-    p.line(cx + ux * r0, cy + uy * r0, cx + ux * r1, cy + uy * r1, "#f7f3ea", 3)
+    p.line(cx + ux * r0, cy + uy * r0, cx + ux * r1, cy + uy * r1, theme.KNOB_POINTER_EDGE, 5)
+    p.line(cx + ux * r0, cy + uy * r0, cx + ux * r1, cy + uy * r1, theme.KNOB_POINTER, 3)
 
     if focused:
         p.oval_outline(cx, cy, d / 2 + 4, theme.GOLD, 2)

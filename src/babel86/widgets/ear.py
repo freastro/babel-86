@@ -14,8 +14,8 @@ SLOT_ANGLES = {
 }
 _STYLE = {
     # kind -> (screw sprite, slot colour, vertical padding)
-    "in": ("screw_in", "#5d584e", 14),
-    "out": ("screw_out", "#2a2926", 12),
+    "in": ("screw_in", theme.SCREW_SLOT_INPUT, 14),
+    "out": ("screw_out", theme.SCREW_SLOT_OUTPUT, 12),
 }
 
 

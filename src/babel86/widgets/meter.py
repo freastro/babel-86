@@ -12,8 +12,8 @@ LABEL_GAP = 6
 
 # kind -> (segment height, padding y, padding x, border, radius, background, border colour)
 _KINDS = {
-    "in": (18, 10, 12, 2, 4, "#0a0a0a", theme.DISPLAY_BORDER_INPUT),
-    "out": (16, 8, 10, 0, 3, "#070707", "#070707"),
+    "in": (18, 10, 12, 2, 4, theme.METER_BG_INPUT, theme.DISPLAY_BORDER_INPUT),
+    "out": (16, 8, 10, 0, 3, theme.METER_BG_OUTPUT, theme.METER_BG_OUTPUT),
 }
 
 

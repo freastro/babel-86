@@ -82,7 +82,16 @@ class App:
         if mode == "add" and not self.rack.can_add:
             return
         draft = state.language_draft(self.rack, mode, index)
-        self.dialog = LanguageDialog(self.root, draft, self.scale, self.fonts, self.sprites)
+        self.canvas.set_dimmed(True)
+        self.dialog = LanguageDialog(
+            self.root, draft, self.scale, self.fonts, self.sprites, on_close=self._dialog_closed
+        )
+
+    def _dialog_closed(self) -> None:
+        """Undo the dimming and give the keyboard back to the rack the dialog was opened from."""
+        self.dialog = None
+        self.canvas.set_dimmed(False)
+        self.canvas.focus_set()
 
 
 def build(root: tk.Tk, rack: RackState | None = None, scale: float | None = None) -> App:
@@ -98,6 +107,9 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         "--display", choices=sorted(theme.DISPLAYS), default="vfd", help="display colour theme"
     )
     parser.add_argument(
+        "--power-on", action="store_true", help="start with the power on, for screenshots (dev)"
+    )
+    parser.add_argument(
         "--units", type=int, choices=range(1, 5), default=4, help="language units to show (dev)"
     )
     parser.add_argument(
@@ -111,10 +123,10 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     enable_dpi_awareness()
-    register_fonts()
     root = tk.Tk()
     rack = state.mock_rack(args.units)
     rack.display = args.display
+    rack.power = args.power_on
     app = build(root, rack)
     if args.dialog:
         mode, _, index = args.dialog.partition(":")
