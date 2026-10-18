@@ -22,13 +22,20 @@ classifiers = [
 babel86 = "babel86.app:main"
 
 [dependency-groups]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = [
+    "pytest>=8",
+    "ruff>=0.6",
+    # Build-time tools only (tools/); the app never imports these. See docs/adr/0002.
+    "pillow>=10",
+    "fonttools>=4.50",
+]
 
 [tool.hatch.version]
 path = "src/babel86/__init__.py"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 
 [tool.ruff]
 line-length = 100
