@@ -108,6 +108,19 @@ class Painter:
             width=max(1, self.p(width)),
         )
 
+    def outline(
+        self, x0: float, y0: float, x1: float, y1: float, colour: str, width: float
+    ) -> None:
+        """A rectangle outline, centred on the given edges: used for focus rings."""
+        self.cv.create_rectangle(
+            self.p(x0),
+            self.p(y0),
+            self.p(x1),
+            self.p(y1),
+            outline=colour,
+            width=max(1, self.p(width)),
+        )
+
     def dashed_box(self, x0: float, y0: float, x1: float, y1: float, colour: str) -> None:
         d = max(1, self.p(1))
         self.cv.create_rectangle(

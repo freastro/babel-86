@@ -11,10 +11,11 @@ voice, and what comes out is your voice in another language.
  mic / line in ──► [ Babel 86 ] ──► cloud model (Gemini | Qwen) ──► [ Babel 86 ] ──► speakers / line out
 ```
 
-> **Status:** Milestone 1, the front panel. The app shows the full rack from
-> `docs/design.md` driven by mock data. Power, mutes and knobs change in memory
-> only, and the language setup dialog is display-only. There is no audio, cloud
-> code or saving yet. See the [roadmap](#roadmap).
+> **Status:** Milestone 2, the interactive front panel. Every control works by
+> mouse, touch and keyboard, the setup dialog adds, edits and removes languages,
+> and the rack is saved and restored after a restart. Output devices are a mock
+> list and there is no audio or cloud code yet, so units show IDLE. See the
+> [roadmap](#roadmap).
 
 ## Requirements
 
@@ -46,19 +47,53 @@ babel86            # or: python -m babel86
 
 What you can do in this milestone:
 
-- The rack starts with the power on, overriding `docs/design.md`. Click the power
-  key to darken the displays.
-- Click the power key, **MUTE INPUT** or a language's **MUTE** to latch them.
-- Turn a knob by dragging it up or down, scrolling over it, or clicking it and
-  using the arrow keys (1 dB steps, **Shift** for 0.1 dB). Double-click resets
-  it to 0 dB.
-- Click a language's **SETUP** or **ADD LANGUAGE OUTPUT** to see the setup
-  dialog; the rack dims behind it. **Esc** or **Cancel** closes it and returns
-  to the rack. The input unit's SETUP does nothing yet.
+- The first launch shows the input unit alone; press **ADD LANGUAGE OUTPUT**
+  to add up to four languages. It opens the setup dialog in Add mode, filled
+  in with the first language not yet in the rack, Gemini, the last unit's
+  device, the next free channel and an unused colour.
+- The rack starts with the power on, overriding `docs/design.md` until audio
+  arrives. Press the power key to darken the displays.
+- Press the power key, **MUTE INPUT** or a language's **MUTE** to latch them.
+- Turn a knob by dragging it up or down, scrolling over it, or with the arrow
+  keys (1 dB steps, **Shift** for 0.1 dB). Double-click resets it to 0 dB.
+- **Keyboard:** **Tab** and **Shift+Tab** move a gold focus ring through every
+  control; **Space** or **Enter** presses the focused key.
+- **Touch:** taps, double taps and drags work like the mouse, and every target
+  is at least 44 × 44 px.
+- A language's **SETUP** opens the setup dialog in Edit mode. Choose the target
+  language (only those the model can speak; ones already in the rack say IN
+  RACK), the label (up to 24 characters; it follows the language until you
+  type your own), the model, the output device and channel, and the colour. A
+  channel another language already uses gets an amber warning. **Enter**
+  confirms and **Esc** cancels. **REMOVE LANGUAGE** asks for a second press
+  while the power is on.
+- The input unit's SETUP does nothing yet.
 
-Dev flags: `--display vfd|led|lcd`, `--units 1-4`, `--power-off`, and
-`--dialog add` or `--dialog edit:2` to open the dialog at launch (handy for
-screenshots).
+The output devices are a mock list (Speakers, 2 channels; Interpreter Desk,
+8 channels) until real audio devices arrive. A saved device that is missing
+shows as "(disconnected)" and its unit reads ERROR.
+
+### Saved rack
+
+The rack is saved to `babel86.json` half a second after each change and when
+the window closes, and loaded at launch:
+
+- Windows: `%APPDATA%\babel86\babel86.json`
+- macOS: `~/Library/Application Support/babel86/babel86.json`
+- Linux: `$XDG_CONFIG_HOME/babel86/babel86.json` (default `~/.config`)
+
+Power is never saved. A file that cannot be read is renamed to
+`babel86.json.bad`, a warning is logged and the app starts empty; a single
+out-of-range value is clamped or reset on its own.
+
+Flags:
+
+- `--display vfd|led|lcd` picks the display colour and saves it.
+- `--config PATH` loads and saves another file, for experiments.
+- `--units 1-4` shows the mock rack from the design canvas and saves nothing
+  (dev, for screenshots).
+- `--power-off` starts with the power off (dev).
+- `--dialog add` or `--dialog edit:2` opens the dialog at launch (dev).
 
 ### Platforms and text
 
@@ -105,10 +140,13 @@ instances cut from Google's variable font by `tools/make_static_fonts.py`.
 
 ```
 src/babel86/
-  app.py        window, DPI, command line, dialog opening
-  rack.py       the rack canvas: drawing from state, hit testing, input
-  dialogs.py    language setup dialog (display-only for now)
-  state.py      rack state, mock data and the rules derived from it
+  app.py        window, DPI, command line, dialog opening, debounced saving
+  rack.py       the rack canvas: drawing from state, hit testing, input, focus
+  dialogs.py    language setup dialog and its dropdown popup
+  state.py      rack state, dialog rules, mock rack and the rules derived from it
+  languages.py  target languages and which models speak them (pure)
+  devices.py    output devices; a mock list until audio arrives (pure)
+  persist.py    babel86.json: load, validate, atomic save (pure)
   layout.py     rack geometry as a function of window size (pure)
   meters.py     dB, knob and meter maths (pure)
   textfit.py    wrapping and ellipsis for any script (pure)
@@ -131,8 +169,7 @@ docs/           design spec and architecture decisions
    translation back.
 3. **Second provider.** The same, behind a common interface, with a front-panel
    selector.
-4. **Saving and the Input Setup dialog.** Working setup fields and a saved
-   rack.
+4. **The Input Setup dialog.** Source device, channel and language.
 5. **Packaging.** Standalone builds (for example, PyInstaller or Briefcase)
    so users don't need Python installed.
 

@@ -7,10 +7,11 @@ Guidance for Claude Code (and other contributors) working in this repo.
 Babel 86 is a desktop app that acts like an audio effects unit for live
 translation: audio in → cloud speech-to-speech model (Google Gemini or
 Alibaba's Qwen) → translated audio out. The UI imitates 1970s–80s rack gear
-(amps, compressors, effects racks). The project is at Milestone 1: the front
-panel from `docs/design.md`, driven by mock data, with no audio or network
-code yet. See `GLOSSARY.md` for the domain terms and `docs/adr/` for the
-decisions behind the stack.
+(amps, compressors, effects racks). The project is at Milestone 2: the
+interactive front panel from `docs/design.md` (mouse, touch and keyboard, a
+working setup dialog, the rack saved to `babel86.json`), with mock output
+devices and no audio or network code yet. See `GLOSSARY.md` for the domain
+terms and `docs/adr/` for the decisions behind the stack.
 
 ## Stack and constraints
 
@@ -51,7 +52,8 @@ uv run python tools/make_sprites.py --check  # fail if sprites are stale
   drawing code. Drawing code works in logical (CSS) pixels; the `Painter`
   applies the UI scale.
 - Keep geometry, dB maths, text fitting and state rules in the pure modules
-  (`layout`, `meters`, `textfit`, `state`) so they are tested without Tk.
+  (`layout`, `meters`, `textfit`, `state`, `languages`, `devices`, `persist`)
+  so they are tested without Tk.
 - Keep UI code (Tk) apart from audio and provider code, so audio and
   network logic can be tested without a display.
 - Tk is single-threaded. Audio callbacks and network streams run on other

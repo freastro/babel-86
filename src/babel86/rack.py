@@ -26,6 +26,7 @@ from babel86.widgets.panels import code_box_width, draw_text_panel, draw_well
 
 SetupHandler = Callable[[str, int | None], None]
 KnobKey = tuple[str, ...]  # ("in",) or ("out", unit uid)
+FocusKey = tuple[str, object]  # a hit's (kind, arg), stable across redraws
 
 CONTENT_TOP = 1 + theme.UNIT_PADDING_Y  # unit top border, then padding
 ROW_TOP = CONTENT_TOP + theme.TAG_HEIGHT + theme.TAG_GAP  # below a section header
@@ -45,6 +46,10 @@ class Hit:
     def contains(self, x: float, y: float) -> bool:
         return self.x0 <= x < self.x1 and self.y0 <= y < self.y1
 
+    @property
+    def key(self) -> FocusKey:
+        return (self.kind, self.arg)
+
 
 class RackCanvas(tk.Canvas):
     """Draws the rack and handles its controls. Everything lives in `self.state`."""
@@ -57,14 +62,17 @@ class RackCanvas(tk.Canvas):
         fonts: FontBook,
         sprites: Sprites,
         on_setup: SetupHandler | None = None,
+        on_change: Callable[[], None] | None = None,
     ) -> None:
         super().__init__(master, background=theme.PAGE, highlightthickness=0, takefocus=True)
         self.state = rack
         self.scale = scale
         self.painter = Painter(self, scale, fonts, sprites)
         self.on_setup = on_setup
+        self.on_change = on_change
         self.hits: list[Hit] = []
-        self.focus_knob: KnobKey | None = None
+        self.focus_key: FocusKey | None = None
+        self.show_ring = False  # True after keyboard navigation, False after a click
         self._drag: tuple[KnobKey, int, float] | None = None
         self._pressed: Hit | None = None
         self._render_scheduled = False
@@ -81,6 +89,36 @@ class RackCanvas(tk.Canvas):
         self.bind("<Button-4>", lambda e: self._wheel(e, 1))
         self.bind("<Button-5>", lambda e: self._wheel(e, -1))
         self.bind("<KeyPress>", self._on_key)
+        self.bind("<Tab>", lambda _e: self.move_focus(1))
+        self.bind("<Shift-Tab>", lambda _e: self.move_focus(-1))
+        if self.tk.call("tk", "windowingsystem") == "x11":
+            self.bind("<ISO_Left_Tab>", lambda _e: self.move_focus(-1))
+
+    @property
+    def focus_knob(self) -> KnobKey | None:
+        if self.focus_key is not None and self.focus_key[0] == "knob":
+            return self.focus_key[1]  # type: ignore[return-value]
+        return None
+
+    def focus_hit(self) -> Hit | None:
+        return next((h for h in self.hits if h.key == self.focus_key), None)
+
+    def move_focus(self, step: int) -> str:
+        """Tab and Shift+Tab: the next or previous control in reading order, wrapping."""
+        keys = [h.key for h in self.hits]
+        if keys:
+            if self.focus_key in keys:
+                i = (keys.index(self.focus_key) + step) % len(keys)
+            else:
+                i = 0 if step > 0 else len(keys) - 1
+            self.focus_key = keys[i]
+            self.show_ring = True
+            self.invalidate()
+        return "break"
+
+    def _changed(self) -> None:
+        if self.on_change is not None:
+            self.on_change()
 
     # -- sizing and drawing --------------------------------------------------------------
 
@@ -124,10 +162,21 @@ class RackCanvas(tk.Canvas):
         for i, unit in enumerate(self.state.units):
             self._draw_language(box.x, tops[1 + i], cols, i, unit)
         self._draw_blank(box.x, tops[-1], cols)
+        self._draw_focus_ring()
         if self._dimmed:
             self._draw_scrim()
         else:
             self._scrim = None
+
+    def _draw_focus_ring(self) -> None:
+        """A gold ring around the focused button; knobs draw their own round ring."""
+        hit = self.focus_hit()
+        if hit is None or hit.kind == "knob" or not self.show_ring:
+            return
+        g = theme.FOCUS_RING_GAP
+        self.painter.outline(
+            hit.x0 - g, hit.y0 - g, hit.x1 + g, hit.y1 + g, theme.FOCUS_RING, theme.FOCUS_RING_WIDTH
+        )
 
     # -- display colours -----------------------------------------------------------------
 
@@ -197,8 +246,7 @@ class RackCanvas(tk.Canvas):
             "mono",
             22,
             colour,
-            spacing=0.06,
-            glow=glow,
+            glow=glow,  # no letter-spacing: the language name may be any script
         )
         p.text(
             right,
@@ -212,7 +260,7 @@ class RackCanvas(tk.Canvas):
             glow=glow,
         )
         dim = blend(colour, theme.DISPLAY_BG, 0.85)
-        p.text(left, row + 62, f"{src.device} · CH {src.channel}", "mono", 13, dim)
+        p.text(left, row + 62, src.route, "mono", 13, dim)
         p.text(right, row + 62, src.format, "mono", 13, dim, anchor="e")
 
         bx = cx1 + DISPLAY_WIDTH + 10
@@ -328,7 +376,7 @@ class RackCanvas(tk.Canvas):
         avail = cw0 - box_w - 14
         top_y = mid - 28
         label = ellipsize(unit.name, lambda s: p.text_width(s, "logo", 16), avail)
-        p.text(tx, top_y + 9.5, label, "logo", 16, theme.TEXT_OUTPUT, spacing=0.06)
+        p.text(tx, top_y + 9.5, label, "logo", 16, theme.TEXT_OUTPUT)  # any script: no spacing
         p.text(
             tx,
             top_y + 19 + 5 + 6.5,
@@ -498,6 +546,7 @@ class RackCanvas(tk.Canvas):
         else:
             self._unit(key[1]).level_db = db
         self.invalidate()
+        self._changed()
 
     def _unit(self, uid: str) -> LanguageUnit:
         return next(u for u in self.state.units if u.uid == uid)
@@ -512,13 +561,12 @@ class RackCanvas(tk.Canvas):
         self.focus_set()
         hit = self._hit_at(event.x, event.y)
         self._pressed = hit
+        self.focus_key = hit.key if hit is not None else None
+        self.show_ring = False
         if hit is not None and hit.kind == "knob":
             key: KnobKey = hit.arg  # type: ignore[assignment]
-            self.focus_knob = key
             self._drag = (key, event.y, self.knob_value(key))
             self.configure(cursor="sb_v_double_arrow")
-        else:
-            self.focus_knob = None
         self.invalidate()
 
     def _on_double(self, event: tk.Event) -> None:
@@ -549,9 +597,11 @@ class RackCanvas(tk.Canvas):
             rack.power = not rack.power
         elif hit.kind == "mute_in":
             rack.source.muted = not rack.source.muted
+            self._changed()
         elif hit.kind == "mute":
             unit = self._unit(hit.arg)  # type: ignore[arg-type]
             unit.muted = not unit.muted
+            self._changed()
         elif hit.kind == "setup" and self.on_setup:
             self.on_setup("edit", hit.arg)  # type: ignore[arg-type]
         elif hit.kind == "add" and self.on_setup:
@@ -566,17 +616,25 @@ class RackCanvas(tk.Canvas):
         hit = self._hit_at(event.x, event.y)
         if hit is not None and hit.kind == "knob":
             key: KnobKey = hit.arg  # type: ignore[assignment]
-            self.focus_knob = key
+            self.focus_key = hit.key
             fine = bool(event.state & 0x1)
             self.set_knob(key, meters.step_db(self.knob_value(key), notches, fine))
 
-    def _on_key(self, event: tk.Event) -> None:
-        if self.focus_knob is None:
-            return
+    def _on_key(self, event: tk.Event) -> str | None:
+        """Space or Enter presses the focused button; arrows (Shift: fine) turn a knob."""
+        hit = self.focus_hit()
+        if hit is None:
+            return None
+        if hit.kind != "knob":
+            if event.keysym in ("space", "Return", "KP_Enter"):
+                self.show_ring = True
+                self._activate(hit)
+                return "break"
+            return None
         notches = {"Up": 1, "Right": 1, "Down": -1, "Left": -1}.get(event.keysym)
         if notches is None:
-            return
+            return None
+        key: KnobKey = hit.arg  # type: ignore[assignment]
         fine = bool(event.state & 0x1)
-        self.set_knob(
-            self.focus_knob, meters.step_db(self.knob_value(self.focus_knob), notches, fine)
-        )
+        self.set_knob(key, meters.step_db(self.knob_value(key), notches, fine))
+        return "break"
